@@ -211,112 +211,6 @@ button {
   pointer-events: none;
 }
 
-.orbit-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  pointer-events: none;
-}
-
-.orbit-panel {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 4;
-  width: max-content;
-  max-width: 220px;
-  opacity: 0;
-  color: var(--foreground);
-  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  pointer-events: auto;
-}
-
-.orbit-mark {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  text-align: left;
-}
-
-.orbit-index {
-  color: var(--foreground);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-}
-
-.orbit-title {
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  font-family: var(--font-serif), Georgia, serif;
-  font-size: 22px;
-  letter-spacing: -0.03em;
-  white-space: nowrap;
-  transition: max-width 0.35s ease, opacity 0.35s ease;
-}
-
-.orbit-reveal {
-  display: grid;
-  grid-template-rows: 0fr;
-  visibility: hidden;
-  opacity: 0;
-  transition: grid-template-rows 0.35s ease, opacity 0.35s ease, visibility 0s linear 0.35s;
-}
-
-.orbit-reveal-inner {
-  overflow: hidden;
-}
-
-.orbit-list {
-  margin: 8px 0 0;
-  padding: 0 0 0 28px;
-  list-style: none;
-}
-
-.orbit-list button {
-  display: block;
-  padding: 3px 0;
-  color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  text-align: left;
-}
-
-.orbit-list button:hover,
-.orbit-list button:focus-visible {
-  color: var(--foreground);
-}
-
-.orbit-panel.is-front {
-  text-align: center;
-}
-
-.orbit-panel.is-front .orbit-mark {
-  justify-content: center;
-}
-
-.orbit-panel.is-front .orbit-list {
-  padding-left: 0;
-}
-
-.orbit-panel.is-front .orbit-list button {
-  width: 100%;
-  text-align: center;
-}
-
-.orbit-panel:hover .orbit-title,
-.orbit-panel:focus-within .orbit-title,
-.orbit-panel.is-front .orbit-title,
-.orbit-panel:hover .orbit-reveal,
-.orbit-panel:focus-within .orbit-reveal,
-.orbit-panel.is-front .orbit-reveal {
-  max-width: 12rem;
-  visibility: visible;
-  opacity: 1;
-  grid-template-rows: 1fr;
-  transition-delay: 0s;
-}
-
 .loader {
   position: fixed;
   z-index: 40;
@@ -442,8 +336,6 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .loader,
   .loader-ball,
-  .orbit-title,
-  .orbit-reveal,
   .nav-links a::after {
     animation: none;
     transition: none;

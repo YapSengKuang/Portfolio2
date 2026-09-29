@@ -21,7 +21,7 @@ export const sections: Section[] = [
     id: "projects",
     index: "01",
     title: "Projects",
-    lede: "Selected work. Turn the ball, or hover a panel to read the list.",
+    lede: "Selected work. Turn the ball, or choose a section above.",
     items: [
       {
         id: "courtline",

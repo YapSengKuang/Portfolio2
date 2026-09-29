@@ -5,9 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DetailPanel } from "@/components/detail-panel";
 import { Loader } from "@/components/loader";
 import { Nav } from "@/components/nav";
-import { OrbitPanels } from "@/components/orbit-panels";
 import { RotationController } from "@/components/rotation-controller";
-import type { PanelNodeMap } from "@/components/volleyball-scene";
 import { sections, sectionById, type SectionId } from "@/lib/sections";
 
 const VolleyballScene = dynamic(
@@ -23,7 +21,6 @@ function normalizeWheel(event: WheelEvent) {
 
 export function Portfolio() {
   const [controller] = useState(() => new RotationController());
-  const panelNodes = useRef<PanelNodeMap>({});
   const stageRef = useRef<HTMLDivElement>(null);
   const pending = useRef<{ index: number; itemId: string | null } | null>(null);
   const [ready, setReady] = useState(false);
@@ -166,17 +163,7 @@ export function Portfolio() {
         selectedItemId={selectedItemId}
         onSelectItem={openItem}
       />
-      <VolleyballScene
-        controller={controller}
-        panelNodes={panelNodes}
-        onReady={() => setReady(true)}
-      />
-      <OrbitPanels
-        activeId={activeSection.id}
-        panelNodes={panelNodes}
-        onOpenSection={openSection}
-        onOpenItem={openItem}
-      />
+      <VolleyballScene controller={controller} onReady={() => setReady(true)} />
       <p className="hint">Drag or scroll to turn</p>
       <Loader ready={ready} />
     </div>
