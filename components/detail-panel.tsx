@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { Section, SectionId } from "@/lib/sections";
 
 type DetailPanelProps = {
@@ -101,7 +101,9 @@ export function DetailPanel({ section, open, onClose, selectedItemId, onSelectIt
             <p className="detail-kicker">
               {section.index} / {section.title}
             </p>
-            <h2 className="sheet-title">{section.title}</h2>
+            <RevealHeading as="h2" className="sheet-title" active={open}>
+              {section.title}
+            </RevealHeading>
             <p className="detail-body">{section.lede}</p>
             <ul className="detail-list">
               {section.items.map((entry) => (
@@ -128,7 +130,9 @@ export function DetailPanel({ section, open, onClose, selectedItemId, onSelectIt
                 id={`${section.id}-${entry.id}`}
                 className={`detail-block ${entry.id === selectedItemId ? "is-selected" : ""}`}
               >
-                <h3>{entry.title}</h3>
+                <RevealHeading as="h3" active={open}>
+                  {entry.title}
+                </RevealHeading>
                 {entry.meta ? <p className="detail-meta">{entry.meta}</p> : null}
                 <p className="detail-body">{entry.body}</p>
                 {entry.points ? (
@@ -149,5 +153,55 @@ export function DetailPanel({ section, open, onClose, selectedItemId, onSelectIt
         ) : null}
       </div>
     </div>
+  );
+}
+
+function RevealHeading({
+  as: Tag,
+  className,
+  children,
+  active,
+}: {
+  as: "h2" | "h3";
+  className?: string;
+  children: string;
+  active: boolean;
+}) {
+  const ref = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !active) return;
+    el.classList.remove("is-shown");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.classList.add("is-shown");
+      return;
+    }
+    const root = el.closest("[data-scroll]");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) el.classList.add("is-shown");
+      },
+      { root: root instanceof Element ? root : null, threshold: 0.4 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [active, children]);
+
+  const words = children.split(/\s+/).filter(Boolean);
+
+  return (
+    <Tag ref={ref} aria-label={children} className={["reveal-heading", className].filter(Boolean).join(" ")}>
+      {words.map((word, index) => (
+        <span
+          key={`${word}-${index}`}
+          className="reveal-word"
+          aria-hidden="true"
+          style={{ "--i": index } as CSSProperties}
+        >
+          <span className="reveal-word-inner">{word}</span>
+        </span>
+      ))}
+    </Tag>
   );
 }

@@ -14,8 +14,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-instrument-serif);
+  --font-sans: var(--font-work-sans);
+  --font-serif: var(--font-work-sans);
 }
 
 * {
@@ -148,7 +148,8 @@ button {
   height: 80vh;
   max-width: 80vw;
   max-height: 80vh;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
   padding: 36px 40px 32px;
   border: 3px solid var(--marking);
   border-radius: 20px;
@@ -211,7 +212,29 @@ button {
   border-bottom-color: var(--court);
 }
 
-.sheet-body > * {
+.sheet-window::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+}
+
+.sheet-window::-webkit-scrollbar-track {
+  background: #1e4db7;
+  border-radius: 999px;
+  margin: 18px 0;
+}
+
+.sheet-window::-webkit-scrollbar-thumb {
+  background: #e23d4e;
+  border: 3px solid #1e4db7;
+  border-radius: 999px;
+}
+
+.sheet-window::-webkit-scrollbar-thumb:hover {
+  background: #e8dcc6;
+}
+
+.sheet-body > *:not(.sheet-title) {
   animation: sheet-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -236,6 +259,39 @@ button {
   font-weight: 400;
   letter-spacing: -0.04em;
   line-height: 0.95;
+}
+
+.reveal-heading {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.28em;
+  row-gap: 0.02em;
+}
+
+.reveal-word {
+  display: inline-flex;
+  overflow: hidden;
+  padding: 0.12em 0 0.18em;
+  margin: -0.12em 0 -0.18em;
+}
+
+.reveal-word-inner {
+  display: inline-block;
+  transform: translateY(120%);
+}
+
+.reveal-heading.is-shown .reveal-word-inner {
+  animation: heading-rise 0.8s cubic-bezier(1, -0.5, 0, 1.5) both;
+  animation-delay: calc(var(--i) * 0.2s);
+}
+
+@keyframes heading-rise {
+  from {
+    transform: translateY(120%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes sheet-rise {
@@ -521,5 +577,10 @@ button {
   .sheet-body > * {
     animation: none;
     transition: none;
+  }
+
+  .reveal-word-inner {
+    animation: none;
+    transform: none;
   }
 }

@@ -214,8 +214,55 @@ function FrameCamera() {
 
 type FloatingLabel = THREE.Object3D & {
   fillOpacity: number;
-  outlineOpacity: number;
 };
+
+function useCourtTexture() {
+  const texture = useMemo(() => {
+    const width = 1024;
+    const height = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return new THREE.CanvasTexture(canvas);
+
+    ctx.fillStyle = "#1e4db7";
+    ctx.fillRect(0, 0, width, height);
+
+    const inset = 36;
+    const attack = height * 0.3;
+    ctx.strokeStyle = "#e8dcc6";
+    ctx.lineWidth = 16;
+    ctx.lineJoin = "miter";
+    ctx.strokeRect(inset, inset, width - inset * 2, height - inset * 2);
+
+    ctx.beginPath();
+    ctx.moveTo(inset, attack);
+    ctx.lineTo(width - inset, attack);
+    ctx.moveTo(inset, height - attack);
+    ctx.lineTo(width - inset, height - attack);
+    ctx.stroke();
+
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.moveTo(width / 2, inset);
+    ctx.lineTo(width / 2, attack);
+    ctx.moveTo(width / 2, height - attack);
+    ctx.lineTo(width / 2, height - inset);
+    ctx.stroke();
+
+    const map = new THREE.CanvasTexture(canvas);
+    /* eslint-disable react-hooks/immutability -- three.js textures store their color space on the texture object */
+    map.colorSpace = THREE.SRGBColorSpace;
+    /* eslint-enable react-hooks/immutability */
+    map.needsUpdate = true;
+    return map;
+  }, []);
+
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  return texture;
+}
 
 function SectionWord({
   title,
@@ -223,15 +270,18 @@ function SectionWord({
   index,
   targetsRef,
   flyingRef,
+  courtTexture,
 }: {
   title: string;
   sectionId: SectionId;
   index: number;
   targetsRef: RefObject<THREE.Mesh[]>;
   flyingRef: RefObject<boolean>;
+  courtTexture: THREE.Texture;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const textRef = useRef<FloatingLabel>(null);
+  const courtRef = useRef<THREE.MeshBasicMaterial>(null);
   const hitRef = useRef<THREE.Mesh>(null);
   const worldPosition = useMemo(() => new THREE.Vector3(), []);
   const angle = index * STEP;
@@ -256,7 +306,7 @@ function SectionWord({
     group.getWorldPosition(worldPosition);
     const facing = flyingRef.current ? 0 : THREE.MathUtils.smoothstep(worldPosition.z, -0.15, 0.9);
     text.fillOpacity = facing;
-    text.outlineOpacity = facing * 0.9;
+    if (courtRef.current) courtRef.current.opacity = facing;
     group.scale.setScalar(0.82 + facing * 0.18);
     if (hitRef.current) hitRef.current.userData.facing = facing;
   });
@@ -267,16 +317,26 @@ function SectionWord({
       position={[Math.sin(angle) * orbit, 0.18, Math.cos(angle) * orbit]}
       rotation={[0, angle, 0]}
     >
+      <mesh position={[0, 0, -0.02]} renderOrder={1} raycast={() => null}>
+        <planeGeometry args={[1.76, 0.88]} />
+        <meshBasicMaterial
+          ref={courtRef}
+          map={courtTexture}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
       <Text
         ref={textRef as Ref<THREE.Mesh>}
+        font="/fonts/WorkSans-Bold.ttf"
         fontSize={0.2}
         color="#e8dcc6"
         anchorX="center"
         anchorY="middle"
         letterSpacing={0.04}
-        outlineWidth={0.012}
-        outlineColor="#1e4db7"
-        outlineOpacity={0.9}
+        renderOrder={2}
       >
         {title}
       </Text>
@@ -295,6 +355,8 @@ function SectionWords({
   targetsRef: RefObject<THREE.Mesh[]>;
   flyingRef: RefObject<boolean>;
 }) {
+  const courtTexture = useCourtTexture();
+
   return (
     <>
       {sections.map((section, index) => (
@@ -305,6 +367,7 @@ function SectionWords({
           index={index}
           targetsRef={targetsRef}
           flyingRef={flyingRef}
+          courtTexture={courtTexture}
         />
       ))}
     </>
