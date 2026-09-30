@@ -14,9 +14,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Seng",
+  title: "Seng Kuang Yap",
   description:
-    "Portfolio of Seng, a software engineer. Turn the volleyball to open Projects, About, and Contact.",
+    "Portfolio of Seng Kuang Yap, a graduate software engineer. Projects, study, and contact.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
