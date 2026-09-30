@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { Section, SectionId } from "@/lib/sections";
 
 type DetailPanelProps = {
@@ -11,10 +12,81 @@ type DetailPanelProps = {
 };
 
 export function DetailPanel({ section, open, onClose, selectedItemId, onSelectItem }: DetailPanelProps) {
+  const windowRef = useRef<HTMLDivElement>(null);
+  const expand = useRef(0);
+
+  useEffect(() => {
+    const el = windowRef.current;
+    if (!el) return;
+
+    const apply = (next: number) => {
+      expand.current = next;
+      el.style.setProperty("--sheet-expand", next.toFixed(3));
+      el.classList.toggle("is-full", next > 0.98);
+    };
+
+    if (!open) {
+      apply(0);
+      return;
+    }
+
+    const mobile = () => window.matchMedia("(max-width: 760px)").matches;
+
+    const consume = (delta: number) => {
+      if (!mobile() || delta <= 0 || expand.current >= 1) return false;
+      apply(Math.min(1, expand.current + delta / 200));
+      return true;
+    };
+
+    const dismissHome = (delta: number) => {
+      if (!mobile() || delta >= 0 || el.scrollTop > 0) return false;
+      onClose();
+      return true;
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (consume(event.deltaY) || dismissHome(event.deltaY)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    let lastY = 0;
+    const onTouchStart = (event: TouchEvent) => {
+      lastY = event.touches[0]?.clientY ?? lastY;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const y = event.touches[0]?.clientY ?? lastY;
+      const delta = lastY - y;
+      lastY = y;
+      if (consume(delta) || dismissHome(delta)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [onClose, open]);
+
   return (
-    <div className={`sheet ${open ? "is-open" : ""}`} data-ui>
+    <div
+      className={`sheet ${open ? "is-open" : ""}`}
+      data-ui
+      onClick={() => {
+        if (open) onClose();
+      }}
+    >
       <div
+        ref={windowRef}
         className="sheet-window"
+        onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal={open}
         aria-hidden={!open}

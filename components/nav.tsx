@@ -5,17 +5,18 @@ import { sections, type SectionId } from "@/lib/sections";
 type NavProps = {
   activeId: SectionId;
   onSelect: (id: SectionId) => void;
+  onHome: () => void;
 };
 
-export function Nav({ activeId, onSelect }: NavProps) {
+export function Nav({ activeId, onSelect, onHome }: NavProps) {
   return (
     <header className="nav" data-ui>
       <a
-        href="#projects"
+        href="#home"
         className="nav-name"
         onClick={(event) => {
           event.preventDefault();
-          onSelect("projects");
+          onHome();
         }}
       >
         Seng

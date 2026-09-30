@@ -270,12 +270,12 @@ function SectionWord({
       <Text
         ref={textRef as Ref<THREE.Mesh>}
         fontSize={0.2}
-        color="#ffffff"
+        color="#e8dcc6"
         anchorX="center"
         anchorY="middle"
         letterSpacing={0.04}
         outlineWidth={0.012}
-        outlineColor="#195fa9"
+        outlineColor="#1e4db7"
         outlineOpacity={0.9}
       >
         {title}
@@ -469,9 +469,9 @@ function SceneContents({ controller, onReady, pickRef, spikeRef, onSpikeDone }: 
       <FrameCamera />
       <WordPicker pickRef={pickRef} targetsRef={targetsRef} ballTargetsRef={ballTargetsRef} />
       <ambientLight intensity={0.55} />
-      <directionalLight position={[4.5, 6.5, 5]} intensity={2.2} color="#ffffff" />
-      <directionalLight position={[-5, 2.2, -3]} intensity={0.45} color="#f07d00" />
-      <directionalLight position={[0, 1.5, -5]} intensity={0.35} color="#195fa9" />
+      <directionalLight position={[4.5, 6.5, 5]} intensity={2.2} color="#fff8ef" />
+      <directionalLight position={[-5, 2.2, -3]} intensity={0.4} color="#e23d4e" />
+      <directionalLight position={[0, 1.5, -5]} intensity={0.35} color="#1e4db7" />
       <SoftShadow />
       <BallFlight spikeRef={spikeRef} onDone={onSpikeDone} reduced={controller.reduced} flyingRef={flyingRef}>
         <Turntable

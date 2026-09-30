@@ -90,19 +90,23 @@ export function Portfolio() {
     const onWheel = (event: WheelEvent) => {
       if (!ready || event.ctrlKey) return;
       const target = event.target;
-      if (target instanceof Element) {
-        const scroller = target.closest("[data-scroll]");
-        if (scroller instanceof HTMLElement && scroller.scrollHeight > scroller.clientHeight + 4) {
-          return;
-        }
+      const scroller = target instanceof Element ? target.closest("[data-scroll]") : null;
+      const tabCanScroll =
+        scroller instanceof HTMLElement && scroller.scrollHeight > scroller.clientHeight + 4;
+
+      if (sheetOpen) {
+        if (!tabCanScroll) event.preventDefault();
+        return;
       }
+
+      if (tabCanScroll) return;
       event.preventDefault();
       controller.scroll(normalizeWheel(event));
     };
 
     stage.addEventListener("wheel", onWheel, { passive: false });
     return () => stage.removeEventListener("wheel", onWheel);
-  }, [controller, ready]);
+  }, [controller, ready, sheetOpen]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -126,6 +130,12 @@ export function Portfolio() {
       window.removeEventListener("keydown", onEscape);
     };
   }, [activeIndex, controller]);
+
+  function goHome() {
+    pending.current = null;
+    setSelectedItemId(null);
+    setSheetOpen(false);
+  }
 
   function revealSection(id: SectionId) {
     const index = sections.findIndex((section) => section.id === id);
@@ -205,11 +215,11 @@ export function Portfolio() {
         setDragging(false);
       }}
     >
-      <Nav activeId={activeSection.id} onSelect={openSection} />
+      <Nav activeId={activeSection.id} onSelect={openSection} onHome={goHome} />
       <DetailPanel
         section={sectionById(sheetId ?? "") ?? null}
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        onClose={goHome}
         selectedItemId={selectedItemId}
         onSelectItem={openItem}
       />

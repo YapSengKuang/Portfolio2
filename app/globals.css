@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #195fa9;
-  --foreground: #ffffff;
-  --muted: rgba(255, 255, 255, 0.78);
-  --line: #ffffff;
-  --court: #f07d00;
-  --free: #195fa9;
-  --marking: #ffffff;
+  --background: #1e4db7;
+  --foreground: #e8dcc6;
+  --muted: rgba(232, 220, 198, 0.78);
+  --line: #e8dcc6;
+  --court: #e23d4e;
+  --free: #1e4db7;
+  --marking: #e8dcc6;
+  --box: #d9b98a;
 }
 
 @theme inline {
@@ -159,9 +160,15 @@ button {
   opacity: 0;
   pointer-events: none;
   user-select: text;
+  cursor: auto;
   transition:
     transform 0.72s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.45s ease;
+}
+
+.sheet.is-open {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .sheet.is-open .sheet-window {
@@ -183,7 +190,7 @@ button {
 .sheet-window .detail-kicker,
 .sheet-window .detail-body,
 .sheet-window .sheet-close {
-  color: rgba(25, 95, 169, 0.78);
+  color: rgba(30, 77, 183, 0.78);
 }
 
 .sheet-window .sheet-title,
@@ -289,6 +296,9 @@ button {
 }
 
 .detail-list button {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--box);
   color: var(--free);
   font-size: 13px;
   letter-spacing: 0.04em;
@@ -304,8 +314,10 @@ button {
 
 .detail-block {
   margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid rgba(25, 95, 169, 0.16);
+  padding: 22px 18px 18px;
+  border-top: 0;
+  border-radius: 14px;
+  background: var(--box);
   scroll-margin-top: 12px;
 }
 
@@ -330,7 +342,7 @@ button {
 .detail-points {
   margin: 14px 0 0;
   padding-left: 1.15rem;
-  color: rgba(25, 95, 169, 0.9);
+  color: rgba(30, 77, 183, 0.92);
   font-size: 15px;
   line-height: 1.55;
 }
@@ -340,11 +352,7 @@ button {
 }
 
 .detail-block.is-selected {
-  background: rgba(240, 125, 0, 0.08);
-  margin-left: -12px;
-  margin-right: -12px;
-  padding-left: 12px;
-  padding-right: 12px;
+  outline: 2px solid var(--court);
 }
 
 .hint {
@@ -461,10 +469,35 @@ button {
     letter-spacing: 0.1em;
   }
 
+  .sheet {
+    align-items: flex-end;
+  }
+
   .sheet-window {
-    width: 80vw;
-    height: 80vh;
+    --sheet-expand: 0;
+    width: 100%;
+    max-width: none;
+    height: calc(80dvh + var(--sheet-expand) * 20dvh);
+    max-height: calc(80dvh + var(--sheet-expand) * 20dvh);
     padding: 24px 20px 20px;
+    border-radius: 20px 20px 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    transition:
+      height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      border-radius 0.5s ease,
+      transform 0.72s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.45s ease;
+  }
+
+  .sheet-window.is-full {
+    border-radius: 0;
+  }
+
+  .sheet:has(.sheet-window.is-full) {
+    z-index: 32;
   }
 
   .sheet-title {

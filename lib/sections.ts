@@ -188,13 +188,6 @@ export const sections: Section[] = [
         linkLabel: "Send email",
       },
       {
-        id: "phone",
-        title: "Phone",
-        body: "+61 412 137 791",
-        href: "tel:+61412137791",
-        linkLabel: "Call",
-      },
-      {
         id: "linkedin",
         title: "LinkedIn",
         body: "linkedin.com/in/seng-kuang-yap",
