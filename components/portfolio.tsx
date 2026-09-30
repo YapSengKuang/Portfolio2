@@ -6,6 +6,7 @@ import { DetailPanel } from "@/components/detail-panel";
 import { Loader } from "@/components/loader";
 import { Nav } from "@/components/nav";
 import { RotationController } from "@/components/rotation-controller";
+import type { ScenePick } from "@/components/volleyball-scene";
 import { sections, sectionById, type SectionId } from "@/lib/sections";
 
 const VolleyballScene = dynamic(
@@ -22,11 +23,18 @@ function normalizeWheel(event: WheelEvent) {
 export function Portfolio() {
   const [controller] = useState(() => new RotationController());
   const stageRef = useRef<HTMLDivElement>(null);
+  const pickRef = useRef<((clientX: number, clientY: number) => ScenePick | null) | null>(null);
+  const spikeRef = useRef<(() => void) | null>(null);
+  const pendingHit = useRef<SectionId | null>(null);
+  const pointerStart = useRef({ x: 0, y: 0 });
   const pending = useRef<{ index: number; itemId: string | null } | null>(null);
   const [ready, setReady] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [targeting, setTargeting] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [sheetId, setSheetId] = useState<SectionId | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const activeSection = sections[activeIndex] ?? sections[0];
 
@@ -107,9 +115,27 @@ export function Portfolio() {
       controller.goTo(next);
     };
 
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSheetOpen(false);
+    };
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onEscape);
+    };
   }, [activeIndex, controller]);
+
+  function revealSection(id: SectionId) {
+    const index = sections.findIndex((section) => section.id === id);
+    if (index < 0) return;
+    pending.current = null;
+    setSelectedItemId(null);
+    controller.goTo(index);
+    setSheetId(id);
+    setSheetOpen(true);
+  }
 
   function openSection(id: SectionId) {
     const index = sections.findIndex((section) => section.id === id);
@@ -117,6 +143,8 @@ export function Portfolio() {
     pending.current = null;
     setSelectedItemId(null);
     controller.goTo(index);
+    setSheetId(id);
+    setSheetOpen((current) => !(current && sheetId === id));
   }
 
   function openItem(id: SectionId, itemId: string) {
@@ -134,22 +162,42 @@ export function Portfolio() {
   return (
     <div
       ref={stageRef}
-      className={`stage ${dragging ? "is-dragging" : ""}`}
+      className={`stage ${dragging ? "is-dragging" : ""} ${targeting ? "is-targeting" : ""}`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
+        pointerStart.current = { x: event.clientX, y: event.clientY };
         if (event.target instanceof Element && event.target.closest("[data-ui]")) return;
         event.currentTarget.setPointerCapture(event.pointerId);
         controller.beginDrag(event.clientX, event.clientY, event.pointerType);
         setDragging(true);
       }}
       onPointerMove={(event) => {
-        if (!controller.dragging) return;
-        controller.drag(event.clientX, event.clientY);
+        if (controller.dragging) {
+          controller.drag(event.clientX, event.clientY);
+          return;
+        }
+        if (event.target instanceof Element && event.target.closest("[data-ui]")) {
+          setTargeting(false);
+          return;
+        }
+        setTargeting(Boolean(pickRef.current?.(event.clientX, event.clientY)?.ball));
       }}
-      onPointerUp={() => {
-        if (!controller.dragging) return;
-        controller.endDrag();
-        setDragging(false);
+      onPointerUp={(event) => {
+        const moved = Math.hypot(
+          event.clientX - pointerStart.current.x,
+          event.clientY - pointerStart.current.y,
+        );
+        const hit = moved < 8 ? (pickRef.current?.(event.clientX, event.clientY) ?? null) : null;
+        if (controller.dragging) {
+          controller.endDrag();
+          setDragging(false);
+        }
+        if (!hit?.ball || pendingHit.current) return;
+        const id = hit.sectionId ?? sections[activeIndex]?.id;
+        if (!id) return;
+        pendingHit.current = id;
+        if (spikeRef.current) spikeRef.current();
+        else revealSection(id);
       }}
       onPointerCancel={() => {
         if (!controller.dragging) return;
@@ -159,11 +207,23 @@ export function Portfolio() {
     >
       <Nav activeId={activeSection.id} onSelect={openSection} />
       <DetailPanel
-        section={sectionById(activeSection.id) ?? activeSection}
+        section={sectionById(sheetId ?? "") ?? null}
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
         selectedItemId={selectedItemId}
         onSelectItem={openItem}
       />
-      <VolleyballScene controller={controller} onReady={() => setReady(true)} />
+      <VolleyballScene
+        controller={controller}
+        onReady={() => setReady(true)}
+        pickRef={pickRef}
+        spikeRef={spikeRef}
+        onSpikeDone={() => {
+          const id = pendingHit.current;
+          pendingHit.current = null;
+          if (id) revealSection(id);
+        }}
+      />
       <p className="hint">Drag or scroll to turn</p>
       <Loader ready={ready} />
     </div>

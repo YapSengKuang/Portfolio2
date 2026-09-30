@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0b0a;
-  --foreground: #f3f1ec;
-  --muted: rgba(243, 241, 236, 0.62);
-  --line: rgba(243, 241, 236, 0.2);
-  --gold: #d7a441;
-  --navy: #8eb0df;
+  --background: #195fa9;
+  --foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.78);
+  --line: #ffffff;
+  --court: #f07d00;
+  --free: #195fa9;
+  --marking: #ffffff;
 }
 
 @theme inline {
@@ -108,7 +109,7 @@ button {
   right: 0;
   bottom: 0;
   height: 1px;
-  background: var(--foreground);
+  background: var(--court);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.35s ease;
@@ -117,7 +118,7 @@ button {
 .nav-links a:hover,
 .nav-links a:focus-visible,
 .nav-links a[aria-current="page"] {
-  color: var(--foreground);
+  color: var(--court);
 }
 
 .nav-links a:hover::after,
@@ -126,16 +127,119 @@ button {
   transform: scaleX(1);
 }
 
-.detail {
+.stage.is-targeting {
+  cursor: pointer;
+}
+
+.sheet {
   position: fixed;
-  z-index: 25;
-  left: 36px;
-  bottom: 28px;
-  width: min(360px, calc(100vw - 72px));
-  max-height: 32vh;
+  z-index: 28;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sheet-window {
+  position: relative;
+  width: 80vw;
+  height: 80vh;
+  max-width: 80vw;
+  max-height: 80vh;
   overflow: auto;
-  pointer-events: auto;
+  padding: 36px 40px 32px;
+  border: 3px solid var(--marking);
+  border-radius: 20px;
+  background: var(--marking);
+  color: var(--free);
+  box-shadow: 0 28px 80px rgba(12, 48, 92, 0.45);
+  backdrop-filter: blur(18px);
+  transform: translateY(calc(100% + 48px));
+  opacity: 0;
+  pointer-events: none;
   user-select: text;
+  transition:
+    transform 0.72s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.45s ease;
+}
+
+.sheet.is-open .sheet-window {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sheet-window .detail-kicker,
+.sheet-window .detail-body,
+.sheet-window .sheet-close {
+  color: rgba(25, 95, 169, 0.78);
+}
+
+.sheet-window .sheet-title,
+.sheet-window .detail-list button {
+  color: var(--free);
+}
+
+.sheet-window .detail-list button:hover,
+.sheet-window .detail-list button:focus-visible,
+.sheet-window .detail-list button[aria-current="true"],
+.sheet-close:hover,
+.sheet-close:focus-visible {
+  color: var(--court);
+}
+
+.sheet-window .detail-link {
+  color: var(--free);
+  border-bottom-color: var(--court);
+}
+
+.sheet-body > * {
+  animation: sheet-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.sheet-body > *:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.sheet-body > *:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+.sheet-body > *:nth-child(4),
+.sheet-body > *:nth-child(5) {
+  animation-delay: 0.14s;
+}
+
+.sheet-title {
+  margin: 0;
+  padding-right: 64px;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+@keyframes sheet-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .detail-kicker {
@@ -171,7 +275,7 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  border-bottom: 1px solid var(--gold);
+  border-bottom: 1px solid var(--court);
   padding-bottom: 2px;
 }
 
@@ -185,7 +289,7 @@ button {
 }
 
 .detail-list button {
-  color: rgba(243, 241, 236, 0.84);
+  color: var(--free);
   font-size: 13px;
   letter-spacing: 0.04em;
   text-decoration: none;
@@ -233,7 +337,7 @@ button {
 .loader-ball {
   width: 92px;
   height: 92px;
-  border: 1.5px solid rgba(243, 241, 236, 0.88);
+  border: 1.5px solid var(--foreground);
   border-radius: 50%;
   position: relative;
   animation: loader-spin 2.8s linear infinite;
@@ -249,14 +353,14 @@ button {
 .loader-ball::before {
   inset: 8px;
   border: 1.5px solid transparent;
-  border-top-color: var(--gold);
-  border-bottom-color: var(--navy);
+  border-top-color: var(--court);
+  border-bottom-color: var(--marking);
 }
 
 .loader-ball::after {
   inset: 22px;
   border: 1.5px solid transparent;
-  border-left-color: rgba(243, 241, 236, 0.85);
+  border-left-color: var(--marking);
   transform: rotate(28deg);
 }
 
@@ -312,16 +416,14 @@ button {
     letter-spacing: 0.1em;
   }
 
-  .detail {
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    width: auto;
-    max-height: 30vh;
+  .sheet-window {
+    width: 80vw;
+    height: 80vh;
+    padding: 24px 20px 20px;
   }
 
-  .detail-title {
-    font-size: 36px;
+  .sheet-title {
+    font-size: 34px;
   }
 
   .hint {
@@ -336,7 +438,9 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .loader,
   .loader-ball,
-  .nav-links a::after {
+  .nav-links a::after,
+  .sheet-window,
+  .sheet-body > * {
     animation: none;
     transition: none;
   }

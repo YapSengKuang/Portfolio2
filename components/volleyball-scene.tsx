@@ -1,17 +1,28 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode, type Ref, type RefObject } from "react";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
+import { Text } from "@react-three/drei";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import * as THREE from "three";
 import type { RotationController } from "@/components/rotation-controller";
+import { sections, type SectionId } from "@/lib/sections";
+import { STEP } from "@/lib/rotation";
 
 const MODEL_URL = "/models/mikasa/scens/Mikasa_Ball-Smooth.fbx";
+
+export type ScenePick = {
+  sectionId: SectionId | null;
+  ball: boolean;
+};
 
 type SceneProps = {
   controller: RotationController;
   onReady: () => void;
+  pickRef: RefObject<((clientX: number, clientY: number) => ScenePick | null) | null>;
+  spikeRef: RefObject<(() => void) | null>;
+  onSpikeDone: () => void;
 };
 
 function cameraPose(width: number) {
@@ -87,7 +98,13 @@ function prepareBall(source: THREE.Group, ballMaps: SurfaceMaps, pimpaMaps: Surf
   return wrapper;
 }
 
-function MikasaBall({ onReady }: { onReady: () => void }) {
+function MikasaBall({
+  onReady,
+  ballTargetsRef,
+}: {
+  onReady: () => void;
+  ballTargetsRef: RefObject<THREE.Mesh[]>;
+}) {
   const source = useLoader(FBXLoader, MODEL_URL, (loader) => {
     loader.manager.setURLModifier(textureFile);
   });
@@ -106,6 +123,24 @@ function MikasaBall({ onReady }: { onReady: () => void }) {
     sent.current = true;
     onReadyRef.current();
   }, []);
+
+  useEffect(() => {
+    const targets = ballTargetsRef.current;
+    if (!targets) return;
+    const meshes: THREE.Mesh[] = [];
+    model.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      child.userData.ball = true;
+      meshes.push(child);
+      targets.push(child);
+    });
+    return () => {
+      for (const mesh of meshes) {
+        const index = targets.indexOf(mesh);
+        if (index >= 0) targets.splice(index, 1);
+      }
+    };
+  }, [ballTargetsRef, model]);
 
   return <primitive object={model} />;
 }
@@ -177,7 +212,233 @@ function FrameCamera() {
   return null;
 }
 
-function Turntable({ controller, onReady }: { controller: RotationController; onReady: () => void }) {
+type FloatingLabel = THREE.Object3D & {
+  fillOpacity: number;
+  outlineOpacity: number;
+};
+
+function SectionWord({
+  title,
+  sectionId,
+  index,
+  targetsRef,
+  flyingRef,
+}: {
+  title: string;
+  sectionId: SectionId;
+  index: number;
+  targetsRef: RefObject<THREE.Mesh[]>;
+  flyingRef: RefObject<boolean>;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const textRef = useRef<FloatingLabel>(null);
+  const hitRef = useRef<THREE.Mesh>(null);
+  const worldPosition = useMemo(() => new THREE.Vector3(), []);
+  const angle = index * STEP;
+  const orbit = 1.08;
+
+  useEffect(() => {
+    const mesh = hitRef.current;
+    const targets = targetsRef.current;
+    if (!mesh || !targets) return;
+    targets.push(mesh);
+    return () => {
+      const index = targets.indexOf(mesh);
+      if (index >= 0) targets.splice(index, 1);
+    };
+  }, [targetsRef]);
+
+  useFrame(() => {
+    const group = groupRef.current;
+    const text = textRef.current;
+    if (!group || !text) return;
+
+    group.getWorldPosition(worldPosition);
+    const facing = flyingRef.current ? 0 : THREE.MathUtils.smoothstep(worldPosition.z, -0.15, 0.9);
+    text.fillOpacity = facing;
+    text.outlineOpacity = facing * 0.9;
+    group.scale.setScalar(0.82 + facing * 0.18);
+    if (hitRef.current) hitRef.current.userData.facing = facing;
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={[Math.sin(angle) * orbit, 0.18, Math.cos(angle) * orbit]}
+      rotation={[0, angle, 0]}
+    >
+      <Text
+        ref={textRef as Ref<THREE.Mesh>}
+        fontSize={0.2}
+        color="#ffffff"
+        anchorX="center"
+        anchorY="middle"
+        letterSpacing={0.04}
+        outlineWidth={0.012}
+        outlineColor="#195fa9"
+        outlineOpacity={0.9}
+      >
+        {title}
+      </Text>
+      <mesh ref={hitRef} position={[0, 0, 0.03]} userData={{ sectionId, facing: 0 }}>
+        <planeGeometry args={[1.7, 0.55]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function SectionWords({
+  targetsRef,
+  flyingRef,
+}: {
+  targetsRef: RefObject<THREE.Mesh[]>;
+  flyingRef: RefObject<boolean>;
+}) {
+  return (
+    <>
+      {sections.map((section, index) => (
+        <SectionWord
+          key={section.id}
+          title={section.title}
+          sectionId={section.id}
+          index={index}
+          targetsRef={targetsRef}
+          flyingRef={flyingRef}
+        />
+      ))}
+    </>
+  );
+}
+
+function WordPicker({
+  pickRef,
+  targetsRef,
+  ballTargetsRef,
+}: {
+  pickRef: SceneProps["pickRef"];
+  targetsRef: RefObject<THREE.Mesh[]>;
+  ballTargetsRef: RefObject<THREE.Mesh[]>;
+}) {
+  const { camera, gl } = useThree();
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const pointer = useMemo(() => new THREE.Vector2(), []);
+
+  useEffect(() => {
+    if (!pickRef) return;
+    pickRef.current = (clientX, clientY) => {
+      const words = targetsRef.current ?? [];
+      const ball = ballTargetsRef.current ?? [];
+      const rect = gl.domElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects([...words, ...ball], false);
+      for (const hit of hits) {
+        const id = hit.object.userData.sectionId;
+        if (id === "projects" || id === "about" || id === "contact") {
+          if (Number(hit.object.userData.facing) > 0.55) return { sectionId: id, ball: true };
+          continue;
+        }
+        if (hit.object.userData.ball) return { sectionId: null, ball: true };
+      }
+      return null;
+    };
+
+    return () => {
+      pickRef.current = null;
+    };
+  }, [ballTargetsRef, camera, gl, pickRef, pointer, raycaster, targetsRef]);
+
+  return null;
+}
+
+function BallFlight({
+  spikeRef,
+  onDone,
+  reduced,
+  flyingRef,
+  children,
+}: {
+  spikeRef: SceneProps["spikeRef"];
+  onDone: () => void;
+  reduced: boolean;
+  flyingRef: RefObject<boolean>;
+  children: ReactNode;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const onDoneRef = useRef(onDone);
+  const flight = useRef({ playing: false, time: 0, spin: 0 });
+
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  });
+
+  useEffect(() => {
+    if (!spikeRef) return;
+    spikeRef.current = () => {
+      if (flight.current.playing) return;
+      if (reduced) {
+        onDoneRef.current();
+        return;
+      }
+      flight.current.playing = true;
+      flight.current.time = 0;
+      flight.current.spin = 0;
+    };
+    return () => {
+      spikeRef.current = null;
+    };
+  }, [reduced, spikeRef]);
+
+  useFrame((_, delta) => {
+    const group = groupRef.current;
+    const state = flight.current;
+    if (flyingRef.current !== undefined) flyingRef.current = state.playing;
+    if (!group) return;
+    if (!state.playing) {
+      group.position.set(0, 0, 0);
+      group.rotation.x = 0;
+      return;
+    }
+
+    const duration = 1.15;
+    state.time = Math.min(duration, state.time + delta);
+    const t = state.time / duration;
+    const launch = 1 - (1 - t) * (1 - t);
+    group.position.z = -launch * 9.5;
+    group.position.y = Math.sin(t * Math.PI) * 1.7;
+    group.position.x = 0;
+    state.spin += delta * (48 + t * 40);
+    group.rotation.x = -state.spin;
+
+    if (t >= 1) {
+      state.playing = false;
+      state.spin = 0;
+      group.position.set(0, 0, 0);
+      group.rotation.x = 0;
+      onDoneRef.current();
+    }
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+}
+
+function Turntable({
+  controller,
+  onReady,
+  targetsRef,
+  ballTargetsRef,
+  flyingRef,
+}: {
+  controller: RotationController;
+  onReady: () => void;
+  targetsRef: RefObject<THREE.Mesh[]>;
+  ballTargetsRef: RefObject<THREE.Mesh[]>;
+  flyingRef: RefObject<boolean>;
+}) {
   const yaw = useRef<THREE.Group>(null);
   const tilt = useRef<THREE.Group>(null);
 
@@ -190,28 +451,42 @@ function Turntable({ controller, onReady }: { controller: RotationController; on
   return (
     <group ref={yaw}>
       <group ref={tilt}>
-        <MikasaBall onReady={onReady} />
+        <MikasaBall onReady={onReady} ballTargetsRef={ballTargetsRef} />
+        <SectionWords targetsRef={targetsRef} flyingRef={flyingRef} />
       </group>
     </group>
   );
 }
 
-function SceneContents({ controller, onReady }: SceneProps) {
+function SceneContents({ controller, onReady, pickRef, spikeRef, onSpikeDone }: SceneProps) {
+  const targetsRef = useRef<THREE.Mesh[]>([]);
+  const ballTargetsRef = useRef<THREE.Mesh[]>([]);
+  const flyingRef = useRef(false);
+
   return (
     <>
       <StudioEnv />
       <FrameCamera />
+      <WordPicker pickRef={pickRef} targetsRef={targetsRef} ballTargetsRef={ballTargetsRef} />
       <ambientLight intensity={0.55} />
-      <directionalLight position={[4.5, 6.5, 5]} intensity={2.4} color="#fff8ef" />
-      <directionalLight position={[-5, 2.2, -3]} intensity={0.7} color="#d5e2ff" />
-      <directionalLight position={[0, 1.5, -5]} intensity={0.45} color="#ffe7c2" />
+      <directionalLight position={[4.5, 6.5, 5]} intensity={2.2} color="#ffffff" />
+      <directionalLight position={[-5, 2.2, -3]} intensity={0.45} color="#f07d00" />
+      <directionalLight position={[0, 1.5, -5]} intensity={0.35} color="#195fa9" />
       <SoftShadow />
-      <Turntable controller={controller} onReady={onReady} />
+      <BallFlight spikeRef={spikeRef} onDone={onSpikeDone} reduced={controller.reduced} flyingRef={flyingRef}>
+        <Turntable
+          controller={controller}
+          onReady={onReady}
+          targetsRef={targetsRef}
+          ballTargetsRef={ballTargetsRef}
+          flyingRef={flyingRef}
+        />
+      </BallFlight>
     </>
   );
 }
 
-export function VolleyballScene({ controller, onReady }: SceneProps) {
+export function VolleyballScene({ controller, onReady, pickRef, spikeRef, onSpikeDone }: SceneProps) {
   return (
     <Canvas
       className="webgl"
@@ -223,7 +498,13 @@ export function VolleyballScene({ controller, onReady }: SceneProps) {
       }}
       style={{ position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none" }}
     >
-      <SceneContents controller={controller} onReady={onReady} />
+      <SceneContents
+        controller={controller}
+        onReady={onReady}
+        pickRef={pickRef}
+        spikeRef={spikeRef}
+        onSpikeDone={onSpikeDone}
+      />
     </Canvas>
   );
 }
